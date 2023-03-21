@@ -1,0 +1,6 @@
+# ignore these directories
+bin/
+lib/
+build/
+.cache/
+.vscode/
