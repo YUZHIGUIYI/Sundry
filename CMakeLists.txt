@@ -15,3 +15,4 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/bin)
 
 add_subdirectory(TypeErasure)
+add_subdirectory(VisitorDesignPattern)

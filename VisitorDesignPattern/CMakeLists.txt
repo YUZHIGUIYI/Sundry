@@ -1,0 +1,1 @@
+add_executable(AppModernVisitorPattern "src/ModernSolution.cpp")
