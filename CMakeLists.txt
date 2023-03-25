@@ -16,3 +16,4 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/bin)
 
 add_subdirectory(TypeErasure)
 add_subdirectory(VisitorDesignPattern)
+add_subdirectory(ZenoObjectClone)
