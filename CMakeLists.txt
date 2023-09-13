@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 
-project(TypeErasure LANGUAGES CXX C)
+project(Sundry LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -19,3 +19,4 @@ add_subdirectory(VisitorDesignPattern)
 add_subdirectory(ObjectClone)
 add_subdirectory(DisableCopy)
 add_subdirectory(MiniLog)
+add_subdirectory(MemoryResourceInspector)
