@@ -134,7 +134,7 @@ ScopeProfiler::Recorder::~Recorder()
     ScopeProfiler::print_log();
 }
 
-#if defined(__GUNC__) || defined(__clang__)
+#if defined(__GNUC__) || defined(__clang__)
 #define DefScopeProfiler ::ScopeProfiler _scopeProfiler(__PRETTY_FUNCTION__);
 #elif defined(_MSC_VER)
 #define DefScopeProfiler ::ScopeProfiler _scopeProfiler(__FUNCSIG__);
@@ -146,7 +146,7 @@ ScopeProfiler::Recorder::~Recorder()
 
 template <class T>
 static
-#if defined(__GUNC__) || defined(__clang__)
+#if defined(__GNUC__) || defined(__clang__)
 __attribute__((noinline))
 #elif defined(_MSC_VER)
 __declspec(noinline)
