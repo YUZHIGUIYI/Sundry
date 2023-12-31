@@ -13,6 +13,7 @@
 #include <queue>
 #include <vector>
 #include <atomic>
+#include <stdexcept>
 
 namespace toy
 {
@@ -71,29 +72,30 @@ namespace toy
     class ThreadPool
     {
     public:
-        explicit ThreadPool(uint32_t thread_num = 2)
-        : m_threads{ std::vector<std::thread>(thread_num) }, m_shut_down{ false }
+        explicit ThreadPool(size_t thread_num = 2)
+        : m_shut_down{ false }
         {
-
-        }
-
-        // Initialize thread pool
-        void init()
-        {
-            for (size_t i = 0; i < m_threads.size(); ++i)
+            m_threads.reserve(thread_num);
+            for (size_t i = 0; i < thread_num; ++i)
             {
-                m_threads[i] = std::thread{ ThreadWorker{ this, i } };
+                m_threads.emplace_back(ThreadWorker{ this, i } );
             }
         }
 
-        // Wait until threads have finished their current tasks, shut down thread pool
-        void shut_down()
+        ThreadPool(const ThreadPool &) = delete;
+        ThreadPool& operator=(const ThreadPool &) = delete;
+        ThreadPool(ThreadPool &&) = delete;
+        ThreadPool& operator=(ThreadPool &&) = delete;
+
+        ~ThreadPool() noexcept
         {
+            // Wait until threads have finished their current tasks, and then shut down thread pool
             m_shut_down.store(true, std::memory_order_release);
 
             // Notify all worker threads
             m_conditional_variable.notify_all();
 
+            // Block, wait for all threads to finish executing
             for (auto&& each_thread : m_threads)
             {
                 if (each_thread.joinable())
@@ -105,34 +107,43 @@ namespace toy
 
         // Submit a function to be executed asynchronously by thread pool
         template <typename F, typename ... Args>
-        auto submit(F &&f, Args && ... args) -> std::future<decltype(std::forward<F>(f)(std::forward<Args>(args)...))>
+        auto submit(F &&f, Args && ... args) -> std::future<std::invoke_result_t<F, Args ...>>
         {
             // Alias of type of return value of function
-            using return_type = decltype(std::forward<F>(f)(std::forward<Args>(args)...));
+            using return_type = std::invoke_result_t<F, Args ...>;
 
             // Create a function with bounded parameter ready to execute
             std::function<return_type()> func = std::bind(std::forward<F>(f), std::forward<Args>(args)...);
 
             // Encapsulate it into a shared pointer in order to be able to copy construct
-            std::shared_ptr<std::packaged_task<return_type()>> task_ptr = std::make_shared<std::packaged_task<return_type()>>(func);
+            std::shared_ptr<std::packaged_task<return_type()>> task = std::make_shared<std::packaged_task<return_type()>>(func);
 
-            // Wrap packaged task into a void-function
-            std::function<void()> wrapper_func = [task_ptr] () {
-                (*task_ptr)();
-            };
+            // Get future
+            std::future<return_type> return_future = task->get_future();
 
-            // Push to safe queue
-            m_safe_queue.enqueue(wrapper_func);
+            // Push wrap packaged task into queue
+            {
+                std::unique_lock<std::mutex> lock_guard(m_conditional_mutex);
+
+                if (m_shut_down.load(std::memory_order_consume))
+                {
+                    throw std::runtime_error("Submit to a stopped thread pool");
+                }
+
+                m_safe_queue.emplace([wrapper_task = std::move(task)] () {
+                    (*wrapper_task)();
+                });
+            }
 
             // Notify one thread
             m_conditional_variable.notify_one();
 
             // Return the previously registered task pointer
-            return task_ptr->get_future();
+            return return_future;
         }
 
     private:
-        SafeQueue<std::function<void()>> m_safe_queue;
+        std::queue<std::function<void()>> m_safe_queue;
         std::vector<std::thread> m_threads;
         std::mutex m_conditional_mutex;
         std::condition_variable m_conditional_variable;
@@ -151,24 +162,24 @@ namespace toy
 
             void operator()() const
             {
-                std::function<void()> target_func = {};
-                bool has_obtained = false;
-
-                while(!m_thread_pool->m_shut_down.load(std::memory_order_consume))
+                while(true)
                 {
+                    std::function<void()> task = {};
                     {
                         std::unique_lock<std::mutex> lock_guard(m_thread_pool->m_conditional_mutex);
 
-                        while (m_thread_pool->m_safe_queue.empty())
-                        {
-                            m_thread_pool->m_conditional_variable.wait(lock_guard);
-                            if (m_thread_pool->m_shut_down.load(std::memory_order_consume)) break;
-                        }
+                        m_thread_pool->m_conditional_variable.wait(lock_guard, [this] () {
+                            return m_thread_pool->m_shut_down.load(std::memory_order_consume) || !m_thread_pool->m_safe_queue.empty(); });
 
-                        has_obtained = m_thread_pool->m_safe_queue.dequeue(target_func);
+                        if (m_thread_pool->m_shut_down.load(std::memory_order_consume) && m_thread_pool->m_safe_queue.empty()) break;
+
+                        // Pull out task
+                        task = std::move(m_thread_pool->m_safe_queue.front());
+                        m_thread_pool->m_safe_queue.pop();
                     }
 
-                    if (has_obtained) target_func();
+                    // Execute task
+                    if (task) task();
                 }
             }
         };

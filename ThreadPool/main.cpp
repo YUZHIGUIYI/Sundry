@@ -9,7 +9,7 @@
 #include <iostream>
 
 #define TICK(x) auto bench_##x = std::chrono::steady_clock::now();
-#define TOCK(x) std::cerr << #x ": " << std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - bench_##x).count(); std::cerr << "ms\n";
+#define TOCK(x) std::cerr << std::format("{}: {} ms\n", #x, std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - bench_##x).count());
 
 std::random_device rd;
 std::mt19937 mt{ rd() };
@@ -46,8 +46,6 @@ void benchmark()
 {
     toy::ThreadPool thread_pool{ 3 };
 
-    thread_pool.init();
-
     for (int32_t i = 1; i <= 15; ++i)
     {
         for (int32_t j = 1; j <= 15; ++j)
@@ -64,8 +62,6 @@ void benchmark()
     auto second_future = thread_pool.submit(multiply_return, 112, 789);
     auto future_value = second_future.get();
     std::cout << std::format("Last operation(return) result equals to: {}\n", future_value);
-
-    thread_pool.shut_down();
 }
 
 int main()
