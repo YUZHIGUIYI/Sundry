@@ -14,6 +14,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/bin)
 
+add_subdirectory(src/jsoncpp)
 add_subdirectory(src/TypeErasure)
 add_subdirectory(src/VisitorDesignPattern)
 add_subdirectory(src/ObjectClone)
@@ -32,3 +33,4 @@ add_subdirectory(src/SubscribeMode)
 add_subdirectory(src/MultiThreadQueue)
 add_subdirectory(src/FactoryPattern)
 add_subdirectory(src/Signal)
+add_subdirectory(src/Reflect)

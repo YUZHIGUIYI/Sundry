@@ -1,0 +1,12 @@
+file(GLOB_RECURSE SourceFiles CONFIGURE_DEPENDS "${CMAKE_CURRENT_LIST_DIR}/*.cpp" "${CMAKE_CURRENT_LIST_DIR}/*.h")
+add_executable(Reflect ${SourceFiles})
+target_include_directories(Reflect PRIVATE ${CMAKE_CURRENT_LIST_DIR})
+if (MSVC)
+    target_link_libraries(Reflect PRIVATE jsoncpp_lib)
+    target_compile_options(Reflect PRIVATE /Zc:preprocessor)
+else ()
+    target_link_libraries(Reflect PRIVATE jsoncpp)
+endif ()
+
+set_target_properties(Reflect PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG "${PROJECT_SOURCE_DIR}/bin")
+set_target_properties(Reflect PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE "${PROJECT_SOURCE_DIR}/bin")
